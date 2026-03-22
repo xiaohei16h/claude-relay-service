@@ -959,6 +959,14 @@
                             <span class="ml-1">续期</span>
                           </button>
                           <button
+                            class="rounded px-2 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-50 hover:text-amber-900 dark:hover:bg-amber-900/20"
+                            title="重置密钥"
+                            @click="openRegenerateModal(key)"
+                          >
+                            <i class="fas fa-sync-alt" />
+                            <span class="ml-1">重置密钥</span>
+                          </button>
+                          <button
                             :class="[
                               key.isActive
                                 ? 'text-orange-600 hover:bg-orange-50 hover:text-orange-900 dark:hover:bg-orange-900/20'
@@ -1665,6 +1673,13 @@
                   续期
                 </button>
                 <button
+                  class="rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-600 transition-colors hover:bg-amber-100 dark:bg-amber-900/30 dark:hover:bg-amber-900/50"
+                  @click="openRegenerateModal(key)"
+                >
+                  <i class="fas fa-sync-alt mr-1" />
+                  重置密钥
+                </button>
+                <button
                   :class="[
                     key.isActive
                       ? 'bg-orange-50 text-orange-600 hover:bg-orange-100 dark:bg-orange-900/30 dark:hover:bg-orange-900/50'
@@ -2110,6 +2125,13 @@
       @success="handleRenewSuccess"
     />
 
+    <RegenerateApiKeyModal
+      v-if="showRegenerateModal"
+      :api-key="regeneratingApiKey"
+      @close="showRegenerateModal = false"
+      @success="handleRegenerateSuccess"
+    />
+
     <NewApiKeyModal
       v-if="showNewApiKeyModal"
       :api-key="newApiKeyData"
@@ -2176,6 +2198,7 @@ import * as XLSX from 'xlsx-js-style'
 import CreateApiKeyModal from '@/components/apikeys/CreateApiKeyModal.vue'
 import EditApiKeyModal from '@/components/apikeys/EditApiKeyModal.vue'
 import RenewApiKeyModal from '@/components/apikeys/RenewApiKeyModal.vue'
+import RegenerateApiKeyModal from '@/components/apikeys/RegenerateApiKeyModal.vue'
 import NewApiKeyModal from '@/components/apikeys/NewApiKeyModal.vue'
 import BatchApiKeyModal from '@/components/apikeys/BatchApiKeyModal.vue'
 import BatchEditApiKeyModal from '@/components/apikeys/BatchEditApiKeyModal.vue'
@@ -2351,8 +2374,10 @@ const showNewApiKeyModal = ref(false)
 const showBatchApiKeyModal = ref(false)
 const showBatchEditModal = ref(false)
 const showTagManagementModal = ref(false)
+const showRegenerateModal = ref(false)
 const editingApiKey = ref(null)
 const renewingApiKey = ref(null)
+const regeneratingApiKey = ref(null)
 const newApiKeyData = ref(null)
 const batchApiKeyData = ref([])
 
@@ -3872,6 +3897,17 @@ const handleRenewSuccess = () => {
   loadApiKeys()
 }
 
+// 打开重置密钥模态框
+const openRegenerateModal = (apiKey) => {
+  regeneratingApiKey.value = apiKey
+  showRegenerateModal.value = true
+}
+
+// 处理重置密钥成功
+const handleRegenerateSuccess = () => {
+  loadApiKeys()
+}
+
 // 获取API Key的操作菜单项（用于ActionDropdown）
 const getApiKeyActions = (key) => {
   const actions = [
@@ -3894,6 +3930,15 @@ const getApiKeyActions = (key) => {
       handler: () => openRenewApiKeyModal(key)
     })
   }
+
+  // 重置密钥
+  actions.push({
+    key: 'regenerate',
+    label: '重置密钥',
+    icon: 'fa-sync-alt',
+    color: 'amber',
+    handler: () => openRegenerateModal(key)
+  })
 
   // 激活/禁用
   actions.push({

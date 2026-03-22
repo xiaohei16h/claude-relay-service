@@ -2307,6 +2307,53 @@ class ApiKeyService {
     }
   }
 
+  // 🔑 设置自定义API Key
+  async setCustomApiKey(keyId, customKey) {
+    try {
+      const existingKey = await redis.getApiKey(keyId)
+      if (!existingKey) {
+        throw new Error('API key not found')
+      }
+
+      // 确保带前缀
+      const fullKey = customKey.startsWith(this.prefix) ? customKey : `${this.prefix}${customKey}`
+
+      const newHashedKey = this._hashApiKey(fullKey)
+
+      // 检查新key是否已被使用
+      const existingMapping = await redis.findApiKeyByHash(newHashedKey)
+      if (existingMapping && existingMapping.id !== keyId) {
+        throw new Error('This API key is already in use')
+      }
+
+      // 删除旧的哈希映射
+      const oldHashedKey = existingKey.apiKey
+      await redis.deleteApiKeyHash(oldHashedKey)
+
+      // 更新key数据
+      const updatedKeyData = {
+        ...existingKey,
+        apiKey: newHashedKey,
+        updatedAt: new Date().toISOString()
+      }
+
+      // 保存新数据并建立新的哈希映射
+      await redis.setApiKey(keyId, updatedKeyData, newHashedKey)
+
+      logger.info(`🔑 Set custom API key: ${existingKey.name} (${keyId})`)
+
+      return {
+        id: keyId,
+        name: existingKey.name,
+        key: fullKey,
+        updatedAt: updatedKeyData.updatedAt
+      }
+    } catch (error) {
+      logger.error('❌ Failed to set custom API key:', error)
+      throw error
+    }
+  }
+
   // 🗑️ 硬删除API Key (完全移除)
   async hardDeleteApiKey(keyId) {
     try {

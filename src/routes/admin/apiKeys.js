@@ -2372,6 +2372,55 @@ router.put('/api-keys/:keyId', authenticateAdmin, async (req, res) => {
   }
 })
 
+// 重新生成或自定义API Key
+router.post('/api-keys/:keyId/regenerate', authenticateAdmin, async (req, res) => {
+  try {
+    const { keyId } = req.params
+    const { customKey } = req.body
+
+    // 检查API Key是否存在
+    const keyData = await redis.getApiKey(keyId)
+    if (!keyData || Object.keys(keyData).length === 0) {
+      return res.status(404).json({ error: 'API key not found' })
+    }
+
+    let result
+
+    if (customKey && typeof customKey === 'string' && customKey.trim()) {
+      // 自定义key模式
+      const trimmedKey = customKey.trim()
+      const prefix = config.security.apiKeyPrefix || 'cr_'
+      const keyBody = trimmedKey.startsWith(prefix) ? trimmedKey.slice(prefix.length) : trimmedKey
+
+      if (keyBody.length < 16) {
+        return res.status(400).json({
+          error: 'Custom key too short',
+          message: `Key body must be at least 16 characters (excluding "${prefix}" prefix)`
+        })
+      }
+
+      result = await apiKeyService.setCustomApiKey(keyId, trimmedKey)
+    } else {
+      // 随机生成模式
+      result = await apiKeyService.regenerateApiKey(keyId)
+    }
+
+    logger.success(`🔄 Admin regenerated API key: ${keyId}`)
+    return res.json({
+      success: true,
+      key: result.key,
+      name: result.name,
+      updatedAt: result.updatedAt
+    })
+  } catch (error) {
+    if (error.message === 'This API key is already in use') {
+      return res.status(409).json({ error: 'Conflict', message: error.message })
+    }
+    logger.error('❌ Failed to regenerate API key:', error)
+    return res.status(500).json({ error: 'Failed to regenerate API key', message: error.message })
+  }
+})
+
 // 修改API Key过期时间（包括手动激活功能）
 router.patch('/api-keys/:keyId/expiration', authenticateAdmin, async (req, res) => {
   try {

@@ -106,6 +106,8 @@ export const batchUpdateApiKeysApi = (data) =>
   request({ url: '/admin/api-keys/batch', method: 'PUT', data })
 export const getApiKeyUsageRecordsApi = (id, params) =>
   request({ url: `/admin/api-keys/${id}/usage-records`, method: 'GET', params })
+export const regenerateApiKeyApi = (id, data = {}) =>
+  request({ url: `/admin/api-keys/${id}/regenerate`, method: 'POST', data })
 
 // Claude 账户
 export const getClaudeAccountsApi = () => request({ url: '/admin/claude-accounts', method: 'GET' })
